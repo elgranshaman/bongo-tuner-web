@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bongo Tuner - Latin Percussion Tuning Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        .drum-animation {
+            animation: drumBeat 0.3s ease-in-out;
+        }
+        
+        @keyframes drumBeat {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .frequency-bar {
+            transition: width 0.3s ease-in-out;
+        }
+        
+        .tuning-indicator {
+            transition: all 0.3s ease-in-out;
+        }
+        
+        .note-button {
+            transition: all 0.2s ease-in-out;
+        }
+        
+        .note-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #8B7355 0%, #5D4E37 100%);
+        }
+        
+        .drum-shadow {
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .drum-select {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .drum-select option {
+            background: #374151;
+            color: white;
+        }
+    </style>
+</head>
+<body class="min-h-screen gradient-bg">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl md:text-6xl font-bold text-white mb-4">
+                <i class="fas fa-drum mr-4"></i>Bongo Tuner
+            </h1>
+            <p class="text-xl text-white opacity-90">Latin Percussion Tuning Tool for Beginners</p>
+        </div>
+
+        <!-- Main Tuner Interface -->
+        <div class="max-w-4xl mx-auto">
+            <!-- Bongo Drums Visual -->
+            <div class="flex flex-col sm:flex-row justify-center items-center mb-8 space-y-8 sm:space-y-0 sm:space-x-8">
+                <!-- Macho (smaller drum) -->
+                <div class="text-center">
+                    <div id="macho-drum" class="w-32 h-32 md:w-40 md:h-40 bg-gradient-to-b from-amber-700 to-amber-900 rounded-full drum-shadow cursor-pointer note-button flex items-center justify-center">
+                        <div class="w-24 h-24 md:w-32 md:h-32 bg-amber-50 rounded-full flex items-center justify-center">
+                            <span class="text-amber-900 font-bold text-lg">MACHO</span>
+                        </div>
+                    </div>
+                    <p class="text-white mt-2 font-semibold">Higher Pitch</p>
+                    <div class="mt-2">
+                        <select id="macho-target" class="drum-select rounded px-2 py-1 text-sm">
+                            <option value="293.66">D4 (294Hz)</option>
+                            <option value="311.13">D#4 (311Hz)</option>
+                            <option value="329.63" selected>E4 (330Hz)</option>
+                            <option value="349.23">F4 (349Hz)</option>
+                            <option value="369.99">F#4 (370Hz)</option>
+                            <option value="392.00">G4 (392Hz)</option>
+                            <option value="415.30">G#4 (415Hz)</option>
+                            <option value="440.00">A4 (440Hz)</option>
+                            <option value="466.16">A#4 (466Hz)</option>
+                            <option value="493.88">B4 (494Hz)</option>
+                            <option value="523.25">C5 (523Hz)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Hembra (larger drum) -->
+                <div class="text-center">
+                    <div id="hembra-drum" class="w-40 h-40 md:w-48 md:h-48 bg-gradient-to-b from-amber-800 to-stone-900 rounded-full drum-shadow cursor-pointer note-button flex items-center justify-center">
+                        <div class="w-32 h-32 md:w-40 md:h-40 bg-amber-50 rounded-full flex items-center justify-center">
+                            <span class="text-amber-900 font-bold text-xl">HEMBRA</span>
+                        </div>
+                    </div>
+                    <p class="text-white mt-2 font-semibold">Lower Pitch</p>
+                    <div class="mt-2">
+                        <select id="hembra-target" class="drum-select rounded px-2 py-1 text-sm">
+                            <option value="130.81">C3 (131Hz)</option>
+                            <option value="138.59">C#3 (139Hz)</option>
+                            <option value="146.83">D3 (147Hz)</option>
+                            <option value="155.56">D#3 (156Hz)</option>
+                            <option value="164.81">E3 (165Hz)</option>
+                            <option value="174.61" selected>F3 (175Hz)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tuning Display -->
+            <div class="bg-white rounded-2xl shadow-2xl p-6 md:p-8 mb-8">
+                <div class="text-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-2">Current Tuning</h2>
+                    <div class="flex justify-center items-center space-x-4">
+                        <div class="text-4xl font-bold text-purple-600" id="current-note">--</div>
+                        <div class="text-2xl text-gray-600" id="current-frequency">-- Hz</div>
+                    </div>
+                </div>
+
+                <!-- Tuning Meter -->
+                <div class="relative mb-6">
+                    <div class="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
+                        <div id="tuning-meter" class="h-full bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 frequency-bar" style="width: 50%"></div>
+                    </div>
+                    <div class="flex justify-between text-sm text-gray-600 mt-2">
+                        <span>Flat</span>
+                        <span>Perfect</span>
+                        <span>Sharp</span>
+                    </div>
+                </div>
+
+                <!-- Tuning Status -->
+                <div class="text-center mb-6">
+                    <div id="tuning-status" class="inline-block px-6 py-3 rounded-full font-semibold tuning-indicator">
+                        <i class="fas fa-music mr-2"></i>
+                        <span>Click a drum to start tuning</span>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="flex flex-wrap justify-center gap-4">
+                    <button id="start-tuning" class="bg-emerald-700 hover:bg-emerald-800 text-white px-6 py-3 rounded-lg font-semibold note-button">
+                        <i class="fas fa-play mr-2"></i>Start Tuning
+                    </button>
+                    <button id="stop-tuning" class="bg-red-800 hover:bg-red-900 text-white px-6 py-3 rounded-lg font-semibold note-button" disabled>
+                        <i class="fas fa-stop mr-2"></i>Stop Tuning
+                    </button>
+                    <button id="play-reference" class="bg-stone-700 hover:bg-stone-800 text-white px-6 py-3 rounded-lg font-semibold note-button">
+                        <i class="fas fa-volume-up mr-2"></i>Play Reference
+                    </button>
+                </div>
+            </div>
+
+            <!-- Reference Notes -->
+            <div class="bg-white rounded-2xl shadow-2xl p-6 md:p-8">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6 text-center">Reference Notes</h3>
+                <div id="reference-notes-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Dynamic reference notes will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Interval Analysis -->
+            <div class="mt-8 bg-white rounded-2xl shadow-2xl p-6 md:p-8">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6 text-center">Interval Analysis</h3>
+                <div id="interval-display" class="text-center">
+                    <div class="bg-amber-100 rounded-lg p-4">
+                        <div class="text-lg font-semibold text-amber-900 mb-2">Current Interval</div>
+                        <div id="interval-result" class="text-2xl font-bold text-amber-800">--</div>
+                        <div id="interval-description" class="text-sm text-amber-700 mt-2">Select drum targets to see interval relationship</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Instructions -->
+            <div class="mt-8 bg-white bg-opacity-20 rounded-2xl p-6 text-white">
+                <h3 class="text-xl font-bold mb-4"><i class="fas fa-info-circle mr-2"></i>How to Use</h3>
+                <ul class="space-y-2 text-sm">
+                    <li><strong>1.</strong> Choose the <em>target note</em> for each drum from the dropdown under <strong>Macho</strong> and <strong>Hembra</strong>.</li>
+                    <li><strong>2.</strong> Review the <em>Interval Analysis</em> box to see the harmonic relationship (octave, fifth, fourth, etc.).</li>
+                    <li><strong>3.</strong> Click <strong>Start Tuning</strong> and allow microphone access.</li>
+                    <li><strong>4.</strong> Strike your bongo and watch the tuning meter – adjust drum tension until the bar is green (in tune).</li>
+                    <li><strong>5.</strong> Click <strong>Play Reference</strong> or tap the reference note buttons to hear the exact target pitch.</li>
+                    <li><strong>6.</strong> Click <strong>Stop Tuning</strong> to end microphone input when finished.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class BongoTuner {
+            constructor() {
+                this.audioContext = null;
+                this.analyser = null;
+                this.microphone = null;
+                this.dataArray = null;
+                this.isListening = false;
+                this.machoFrequency = 329.63; // Default E4
+                this.hembraFrequency = 174.61; // Default F3
+                this.targetFrequency = this.hembraFrequency;
+                this.currentDrum = 'hembra';
+                
+                this.initializeElements();
+                this.setupEventListeners();
+                this.setupAudioContext();
+                this.updateReferenceNotes();
+                this.updateIntervalAnalysis();
+            }
+
+            initializeElements() {
+                this.elements = {
+                    startButton: document.getElementById('start-tuning'),
+                    stopButton: document.getElementById('stop-tuning'),
+                    playButton: document.getElementById('play-reference'),
+                    currentNote: document.getElementById('current-note'),
+                    currentFrequency: document.getElementById('current-frequency'),
+                    tuningMeter: document.getElementById('tuning-meter'),
+                    tuningStatus: document.getElementById('tuning-status'),
+                    machoDrum: document.getElementById('macho-drum'),
+                    hembraDrum: document.getElementById('hembra-drum'),
+                    machoTarget: document.getElementById('macho-target'),
+                    hembraTarget: document.getElementById('hembra-target'),
+                    referenceNotesContainer: document.getElementById('reference-notes-container'),
+                    intervalResult: document.getElementById('interval-result'),
+                    intervalDescription: document.getElementById('interval-description')
+                };
+            }
+
+            setupEventListeners() {
+                this.elements.startButton.addEventListener('click', () => this.startTuning());
+                this.elements.stopButton.addEventListener('click', () => this.stopTuning());
+                this.elements.playButton.addEventListener('click', () => this.playReference());
+                
+                this.elements.machoDrum.addEventListener('click', () => this.selectDrum('macho'));
+                this.elements.hembraDrum.addEventListener('click', () => this.selectDrum('hembra'));
+                
+                this.elements.machoTarget.addEventListener('change', (e) => {
+                    this.machoFrequency = parseFloat(e.target.value);
+                    if (this.currentDrum === 'macho') {
+                        this.targetFrequency = this.machoFrequency;
+                        this.updateTargetDisplay();
+                    }
+                    this.updateReferenceNotes();
+                    this.updateIntervalAnalysis();
+                });
+                
+                this.elements.hembraTarget.addEventListener('change', (e) => {
+                    this.hembraFrequency = parseFloat(e.target.value);
+                    if (this.currentDrum === 'hembra') {
+                        this.targetFrequency = this.hembraFrequency;
+                        this.updateTargetDisplay();
+                    }
+                    this.updateReferenceNotes();
+                    this.updateIntervalAnalysis();
+                });
+                
+                // Initialize reference notes
+                this.updateReferenceNotes();
+            }
+
+            async setupAudioContext() {
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (error) {
+                    console.error('Audio context not supported:', error);
+                    this.showStatus('Audio not supported in this browser', 'error');
+                }
+            }
+
+            selectDrum(drum) {
+                this.currentDrum = drum;
+                
+                // Remove previous selection
+                this.elements.machoDrum.classList.remove('ring-4', 'ring-yellow-400');
+                this.elements.hembraDrum.classList.remove('ring-4', 'ring-yellow-400');
+                
+                if (drum === 'macho') {
+                    this.targetFrequency = this.machoFrequency;
+                    this.elements.machoDrum.classList.add('ring-4', 'ring-yellow-400', 'drum-animation');
+                    this.updateTargetDisplay();
+                } else {
+                    this.targetFrequency = this.hembraFrequency;
+                    this.elements.hembraDrum.classList.add('ring-4', 'ring-yellow-400', 'drum-animation');
+                    this.updateTargetDisplay();
+                }
+                
+                // Remove animation class after animation completes
+                setTimeout(() => {
+                    this.elements.machoDrum.classList.remove('drum-animation');
+                    this.elements.hembraDrum.classList.remove('drum-animation');
+                }, 300);
+            }
+
+            async startTuning() {
+                try {
+                    if (!this.audioContext) {
+                        await this.setupAudioContext();
+                    }
+
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    this.microphone = this.audioContext.createMediaStreamSource(stream);
+                    this.analyser = this.audioContext.createAnalyser();
+                    
+                    this.analyser.fftSize = 4096;
+                    this.analyser.smoothingTimeConstant = 0.8;
+                    this.dataArray = new Float32Array(this.analyser.frequencyBinCount);
+                    
+                    this.microphone.connect(this.analyser);
+                    
+                    this.isListening = true;
+                    this.elements.startButton.disabled = true;
+                    this.elements.stopButton.disabled = false;
+                    
+                    this.showStatus('Listening... Strike your drum!', 'listening');
+                    this.updateTuning();
+                    
+                } catch (error) {
+                    console.error('Microphone access denied:', error);
+                    this.showStatus('Microphone access required for tuning', 'error');
+                }
+            }
+
+            stopTuning() {
+                this.isListening = false;
+                
+                if (this.microphone) {
+                    this.microphone.disconnect();
+                    this.microphone = null;
+                }
+                
+                this.elements.startButton.disabled = false;
+                this.elements.stopButton.disabled = true;
+                this.elements.currentNote.textContent = '--';
+                this.elements.currentFrequency.textContent = '-- Hz';
+                this.elements.tuningMeter.style.width = '50%';
+                
+                this.showStatus('Tuning stopped', 'info');
+            }
+
+            updateTuning() {
+                if (!this.isListening || !this.analyser) return;
+                
+                this.analyser.getFloatFrequencyData(this.dataArray);
+                
+                const frequency = this.detectPitch();
+                if (frequency > 0) {
+                    const note = this.frequencyToNote(frequency);
+                    const cents = this.getCents(frequency, this.targetFrequency);
+                    
+                    this.elements.currentNote.textContent = note;
+                    this.elements.currentFrequency.textContent = Math.round(frequency) + ' Hz';
+                    
+                    this.updateMeter(cents);
+                    this.updateStatus(cents);
+                }
+                
+                requestAnimationFrame(() => this.updateTuning());
+            }
+
+            detectPitch() {
+                const bufferLength = this.analyser.frequencyBinCount;
+                const sampleRate = this.audioContext.sampleRate;
+                
+                // Find the frequency with the highest magnitude
+                let maxIndex = 0;
+                let maxValue = -Infinity;
+                
+                for (let i = 0; i < bufferLength; i++) {
+                    if (this.dataArray[i] > maxValue) {
+                        maxValue = this.dataArray[i];
+                        maxIndex = i;
+                    }
+                }
+                
+                // Convert index to frequency
+                const frequency = maxIndex * sampleRate / (2 * bufferLength);
+                
+                // Only return frequencies in a reasonable range for drums
+                return (frequency > 80 && frequency < 800 && maxValue > -60) ? frequency : 0;
+            }
+
+            frequencyToNote(frequency) {
+                const A4 = 440;
+                const semitone = Math.round(12 * Math.log2(frequency / A4));
+                const notes = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#'];
+                const octave = Math.floor((semitone + 9) / 12) + 4;
+                const noteIndex = ((semitone % 12) + 12) % 12;
+                return notes[noteIndex] + octave;
+            }
+
+            getCents(frequency, targetFrequency) {
+                return Math.round(1200 * Math.log2(frequency / targetFrequency));
+            }
+
+            updateMeter(cents) {
+                // Clamp cents to reasonable range for display
+                const clampedCents = Math.max(-100, Math.min(100, cents));
+                const percentage = ((clampedCents + 100) / 200) * 100;
+                this.elements.tuningMeter.style.width = percentage + '%';
+            }
+
+            updateStatus(cents) {
+                const absCents = Math.abs(cents);
+                
+                if (absCents <= 10) {
+                    this.showStatus('Perfect! In tune', 'perfect');
+                } else if (absCents <= 25) {
+                    this.showStatus('Very close - minor adjustment needed', 'close');
+                } else if (cents > 0) {
+                    this.showStatus('Too sharp - loosen drum tension', 'sharp');
+                } else {
+                    this.showStatus('Too flat - tighten drum tension', 'flat');
+                }
+            }
+
+            showStatus(message, type) {
+                const status = this.elements.tuningStatus;
+                status.innerHTML = `<i class="fas fa-${this.getStatusIcon(type)} mr-2"></i><span>${message}</span>`;
+                
+                // Remove all status classes
+                status.className = 'inline-block px-6 py-3 rounded-full font-semibold tuning-indicator';
+                
+                // Add appropriate class based on type
+                switch (type) {
+                    case 'perfect':
+                        status.classList.add('bg-green-500', 'text-white');
+                        break;
+                    case 'close':
+                        status.classList.add('bg-yellow-500', 'text-white');
+                        break;
+                    case 'sharp':
+                        status.classList.add('bg-orange-500', 'text-white');
+                        break;
+                    case 'flat':
+                        status.classList.add('bg-red-500', 'text-white');
+                        break;
+                    case 'listening':
+                        status.classList.add('bg-blue-500', 'text-white');
+                        break;
+                    case 'error':
+                        status.classList.add('bg-red-600', 'text-white');
+                        break;
+                    default:
+                        status.classList.add('bg-gray-500', 'text-white');
+                }
+            }
+
+            getStatusIcon(type) {
+                const icons = {
+                    perfect: 'check-circle',
+                    close: 'adjust',
+                    sharp: 'arrow-up',
+                    flat: 'arrow-down',
+                    listening: 'microphone',
+                    error: 'exclamation-triangle',
+                    info: 'info-circle'
+                };
+                return icons[type] || 'music';
+            }
+
+            updateTargetDisplay() {
+                const note = this.frequencyToNote(this.targetFrequency);
+                const drumName = this.currentDrum === 'macho' ? 'Macho' : 'Hembra';
+                this.showStatus(`${drumName} drum selected - Target: ${note} (${Math.round(this.targetFrequency)}Hz)`, 'info');
+            }
+
+            updateReferenceNotes() {
+                const container = this.elements.referenceNotesContainer;
+                container.innerHTML = '';
+                
+                // Get current selected notes
+                const machoNote = this.frequencyToNote(this.machoFrequency);
+                const hembraNote = this.frequencyToNote(this.hembraFrequency);
+                
+                // Create reference note buttons (Macho first to align with drum layout)
+                const notes = [
+                    {
+                        note: machoNote,
+                        freq: this.machoFrequency,
+                        drum: 'Macho',
+                        color: 'bg-amber-700 hover:bg-amber-800'
+                    },
+                    {
+                        note: hembraNote,
+                        freq: this.hembraFrequency,
+                        drum: 'Hembra',
+                        color: 'bg-stone-700 hover:bg-stone-800'
+                    }
+                ];
+                
+                notes.forEach(noteData => {
+                    const button = document.createElement('button');
+                    button.className = `reference-note ${noteData.color} text-white p-4 rounded-lg font-semibold note-button`;
+                    button.innerHTML = `
+                        <div class="text-lg font-bold">${noteData.note}</div>
+                        <div class="text-sm opacity-75">${Math.round(noteData.freq)} Hz</div>
+                        <div class="text-xs opacity-60">${noteData.drum}</div>
+                    `;
+                    
+                    button.addEventListener('click', () => {
+                        this.playTone(noteData.freq, noteData.note);
+                    });
+                    
+                    container.appendChild(button);
+                });
+            }
+
+            updateIntervalAnalysis() {
+                const ratio = this.machoFrequency / this.hembraFrequency;
+                const cents = Math.round(1200 * Math.log2(ratio));
+                
+                let intervalName = '';
+                let description = '';
+                let isExact = false;
+                
+                // Check for common intervals (with tolerance of ±20 cents)
+                if (Math.abs(cents - 1200) <= 20) {
+                    intervalName = 'Perfect Octave';
+                    description = 'The drums are tuned one octave apart - a very harmonious interval!';
+                    isExact = true;
+                } else if (Math.abs(cents - 700) <= 20) {
+                    intervalName = 'Perfect Fifth';
+                    description = 'The drums form a perfect fifth - a strong, stable harmonic interval.';
+                    isExact = true;
+                } else if (Math.abs(cents - 500) <= 20) {
+                    intervalName = 'Perfect Fourth';
+                    description = 'The drums form a perfect fourth - a consonant, pleasing interval.';
+                    isExact = true;
+                } else if (Math.abs(cents - 600) <= 20) {
+                    intervalName = 'Tritone';
+                    description = 'The drums form a tritone - a dissonant but interesting interval.';
+                } else if (Math.abs(cents - 400) <= 20) {
+                    intervalName = 'Major Third';
+                    description = 'The drums form a major third - a bright, happy interval.';
+                } else if (Math.abs(cents - 300) <= 20) {
+                    intervalName = 'Minor Third';
+                    description = 'The drums form a minor third - a softer, more mellow interval.';
+                } else {
+                    intervalName = 'Custom Interval';
+                    description = `The drums are ${cents} cents apart (${Math.round(ratio * 100) / 100}:1 ratio).`;
+                }
+                
+                this.elements.intervalResult.textContent = intervalName;
+                this.elements.intervalDescription.textContent = description;
+                
+                // Add visual indicator for perfect intervals
+                const container = this.elements.intervalResult.parentElement;
+                container.className = 'bg-amber-100 rounded-lg p-4';
+                
+                if (isExact) {
+                    container.classList.remove('bg-amber-100');
+                    container.classList.add('bg-green-100');
+                    this.elements.intervalResult.className = 'text-2xl font-bold text-green-800';
+                    this.elements.intervalDescription.className = 'text-sm text-green-700 mt-2';
+                } else {
+                    this.elements.intervalResult.className = 'text-2xl font-bold text-amber-800';
+                    this.elements.intervalDescription.className = 'text-sm text-amber-700 mt-2';
+                }
+            }
+
+            playReference() {
+                const note = this.frequencyToNote(this.targetFrequency);
+                this.playTone(this.targetFrequency, note);
+            }
+
+            playTone(frequency, note) {
+                if (!this.audioContext) return;
+                
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.3, this.audioContext.currentTime + 0.1);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 1.5);
+                
+                oscillator.start(this.audioContext.currentTime);
+                oscillator.stop(this.audioContext.currentTime + 1.5);
+                
+                this.showStatus(`Playing ${note} (${Math.round(frequency)}Hz)`, 'info');
+            }
+        }
+
+        // Initialize the tuner when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new BongoTuner();
+        });
+    </script>
+</body>
+</html>
