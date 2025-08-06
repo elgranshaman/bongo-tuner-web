@@ -115,6 +115,13 @@
                             <option value="155.56">D#3 (156Hz)</option>
                             <option value="164.81">E3 (165Hz)</option>
                             <option value="174.61" selected>F3 (175Hz)</option>
+                            <option value="185.00">F#3 (185Hz)</option>
+                            <option value="196.00">G3 (196Hz)</option>
+                            <option value="207.65">G#3 (208Hz)</option>
+                            <option value="220.00">A3 (220Hz)</option>
+                            <option value="233.08">A#3 (233Hz)</option>
+                            <option value="246.94">B3 (247Hz)</option>
+                            <option value="261.63">C4 (262Hz)</option>
                         </select>
                     </div>
                 </div>
@@ -139,6 +146,22 @@
                         <span>Flat</span>
                         <span>Perfect</span>
                         <span>Sharp</span>
+                    </div>
+                </div>
+
+                <!-- Spectrum Analyzer -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-3 text-center">Spectrum Analyzer</h3>
+                    <div class="bg-gray-900 rounded-lg p-4">
+                        <canvas id="spectrum-canvas" width="800" height="200" class="w-full h-auto border border-gray-600 rounded"></canvas>
+                        <div class="flex justify-between text-xs text-gray-400 mt-2">
+                            <span>0 Hz</span>
+                            <span>200 Hz</span>
+                            <span>400 Hz</span>
+                            <span>600 Hz</span>
+                            <span>800 Hz</span>
+                            <span>1000 Hz</span>
+                        </div>
                     </div>
                 </div>
 
@@ -215,6 +238,7 @@
                 this.initializeElements();
                 this.setupEventListeners();
                 this.setupAudioContext();
+                this.initializeSpectrum();
                 this.updateReferenceNotes();
                 this.updateIntervalAnalysis();
             }
@@ -234,7 +258,8 @@
                     hembraTarget: document.getElementById('hembra-target'),
                     referenceNotesContainer: document.getElementById('reference-notes-container'),
                     intervalResult: document.getElementById('interval-result'),
-                    intervalDescription: document.getElementById('interval-description')
+                    intervalDescription: document.getElementById('interval-description'),
+                    spectrumCanvas: document.getElementById('spectrum-canvas')
                 };
             }
 
@@ -279,6 +304,103 @@
                 }
             }
 
+            initializeSpectrum() {
+                this.spectrumCtx = this.elements.spectrumCanvas.getContext('2d');
+                this.spectrumWidth = this.elements.spectrumCanvas.width;
+                this.spectrumHeight = this.elements.spectrumCanvas.height;
+                this.frequencyData = null;
+                
+                // Clear canvas with dark background
+                this.spectrumCtx.fillStyle = '#1f2937';
+                this.spectrumCtx.fillRect(0, 0, this.spectrumWidth, this.spectrumHeight);
+                
+                // Add grid lines
+                this.drawSpectrumGrid();
+            }
+
+            drawSpectrumGrid() {
+                this.spectrumCtx.strokeStyle = '#374151';
+                this.spectrumCtx.lineWidth = 1;
+                
+                // Vertical grid lines (frequency markers)
+                for (let i = 0; i <= 5; i++) {
+                    const x = (i / 5) * this.spectrumWidth;
+                    this.spectrumCtx.beginPath();
+                    this.spectrumCtx.moveTo(x, 0);
+                    this.spectrumCtx.lineTo(x, this.spectrumHeight);
+                    this.spectrumCtx.stroke();
+                }
+                
+                // Horizontal grid lines (amplitude markers)
+                for (let i = 0; i <= 4; i++) {
+                    const y = (i / 4) * this.spectrumHeight;
+                    this.spectrumCtx.beginPath();
+                    this.spectrumCtx.moveTo(0, y);
+                    this.spectrumCtx.lineTo(this.spectrumWidth, y);
+                    this.spectrumCtx.stroke();
+                }
+            }
+
+            drawSpectrum() {
+                if (!this.analyser || !this.frequencyData) return;
+                
+                // Get frequency domain data
+                this.analyser.getByteFrequencyData(this.frequencyData);
+                
+                // Clear canvas
+                this.spectrumCtx.fillStyle = '#1f2937';
+                this.spectrumCtx.fillRect(0, 0, this.spectrumWidth, this.spectrumHeight);
+                
+                // Redraw grid
+                this.drawSpectrumGrid();
+                
+                // Calculate frequency range (0-1000 Hz)
+                const sampleRate = this.audioContext.sampleRate;
+                const nyquist = sampleRate / 2;
+                const maxFreq = 1000; // Display up to 1000 Hz
+                const binCount = Math.floor((maxFreq / nyquist) * this.frequencyData.length);
+                
+                // Draw spectrum bars
+                const barWidth = this.spectrumWidth / binCount;
+                
+                for (let i = 0; i < binCount; i++) {
+                    const amplitude = this.frequencyData[i];
+                    const barHeight = (amplitude / 255) * this.spectrumHeight;
+                    const x = i * barWidth;
+                    const y = this.spectrumHeight - barHeight;
+                    
+                    // Color based on amplitude
+                    const intensity = amplitude / 255;
+                    if (intensity > 0.7) {
+                        this.spectrumCtx.fillStyle = '#ef4444'; // Red for high amplitude
+                    } else if (intensity > 0.4) {
+                        this.spectrumCtx.fillStyle = '#f59e0b'; // Orange for medium
+                    } else if (intensity > 0.2) {
+                        this.spectrumCtx.fillStyle = '#eab308'; // Yellow for low-medium
+                    } else {
+                        this.spectrumCtx.fillStyle = '#22c55e'; // Green for low
+                    }
+                    
+                    this.spectrumCtx.fillRect(x, y, barWidth - 1, barHeight);
+                }
+                
+                // Mark fundamental frequency if detected
+                if (this.lastDetectedFreq && this.lastDetectedFreq > 0) {
+                    const freqX = (this.lastDetectedFreq / maxFreq) * this.spectrumWidth;
+                    this.spectrumCtx.strokeStyle = '#8b5cf6';
+                    this.spectrumCtx.lineWidth = 2;
+                    this.spectrumCtx.beginPath();
+                    this.spectrumCtx.moveTo(freqX, 0);
+                    this.spectrumCtx.lineTo(freqX, this.spectrumHeight);
+                    this.spectrumCtx.stroke();
+                    
+                    // Add frequency label
+                    this.spectrumCtx.fillStyle = '#8b5cf6';
+                    this.spectrumCtx.font = '12px Arial';
+                    this.spectrumCtx.fillText(`${Math.round(this.lastDetectedFreq)}Hz`, freqX + 5, 20);
+                }
+            }
+
             selectDrum(drum) {
                 this.currentDrum = drum;
                 
@@ -308,14 +430,19 @@
                     if (!this.audioContext) {
                         await this.setupAudioContext();
                     }
+                    // Resume audio context in case it is suspended by browser autoplay policies
+                    if (this.audioContext.state === 'suspended') {
+                        await this.audioContext.resume();
+                    }
 
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     this.microphone = this.audioContext.createMediaStreamSource(stream);
                     this.analyser = this.audioContext.createAnalyser();
                     
-                    this.analyser.fftSize = 4096;
-                    this.analyser.smoothingTimeConstant = 0.8;
+                    this.analyser.fftSize = 1024;
+                    this.analyser.smoothingTimeConstant = 0.2;
                     this.dataArray = new Float32Array(this.analyser.frequencyBinCount);
+                    this.frequencyData = new Uint8Array(this.analyser.frequencyBinCount);
                     
                     this.microphone.connect(this.analyser);
                     
@@ -352,9 +479,10 @@
             updateTuning() {
                 if (!this.isListening || !this.analyser) return;
                 
-                this.analyser.getFloatFrequencyData(this.dataArray);
-                
+                // Use time-domain autocorrelation (see detectPitch) for more reliable drum pitch detection
                 const frequency = this.detectPitch();
+                this.lastDetectedFreq = frequency; // Store for spectrum marking
+                
                 if (frequency > 0) {
                     const note = this.frequencyToNote(frequency);
                     const cents = this.getCents(frequency, this.targetFrequency);
@@ -366,29 +494,157 @@
                     this.updateStatus(cents);
                 }
                 
+                // Update spectrum analyzer
+                this.drawSpectrum();
+                
                 requestAnimationFrame(() => this.updateTuning());
             }
 
             detectPitch() {
-                const bufferLength = this.analyser.frequencyBinCount;
+                /* Robust auto-correlation algorithm adapted from
+                   Chris Wilson’s PitchDetect example (MIT licence).
+                   Returns detected fundamental frequency in Hz or 0 if none. */
+                // Autocorrelation-based pitch detection suitable for percussive sounds
+                // Buffer size kept modest for responsiveness
+                const bufferSize = this.analyser.fftSize;
+                // Ensure timeDomainData buffer is initialized
+                if (!this.timeDomainData || this.timeDomainData.length !== bufferSize) {
+                    this.timeDomainData = new Float32Array(bufferSize);
+                }
+                this.analyser.getFloatTimeDomainData(this.timeDomainData);
+                
+                // Apply Hann windowing function to reduce spectral leakage
+                const windowedData = new Float32Array(bufferSize);
+                for (let i = 0; i < bufferSize; i++) {
+                    const window = 0.5 * (1 - Math.cos(2 * Math.PI * i / (bufferSize - 1)));
+                    windowedData[i] = this.timeDomainData[i] * window;
+                }
+                
+                // Calculate RMS for dynamic threshold
+                let rms = 0;
+                for (let i = 0; i < bufferSize; i++) {
+                    rms += windowedData[i] * windowedData[i];
+                }
+                rms = Math.sqrt(rms / bufferSize);
+                
+                // More aggressive dynamic RMS threshold to reduce noise sensitivity
+                const dynamicThreshold = Math.max(0.015, Math.min(0.05, rms * 0.2));
+                if (rms < dynamicThreshold) return 0;
+                
+                // Additional noise gate - require minimum signal strength
+                if (rms < 0.02) return 0;
+                
                 const sampleRate = this.audioContext.sampleRate;
+                const lagCandidates = [];
                 
-                // Find the frequency with the highest magnitude
-                let maxIndex = 0;
-                let maxValue = -Infinity;
+                // Enhanced AMDF with multiple lag candidates
+                for (let lag = 80; lag < bufferSize / 2; lag++) {
+                    let diff = 0;
+                    let count = 0;
+                    
+                    for (let i = 0; i < bufferSize - lag; i++) {
+                        const d = windowedData[i] - windowedData[i + lag];
+                        diff += Math.abs(d);
+                        count++;
+                    }
+                    
+                    // Normalize by number of samples
+                    const normalizedDiff = diff / count;
+                    
+                    // Store potential candidates
+                    lagCandidates.push({ lag, diff: normalizedDiff });
+                }
                 
-                for (let i = 0; i < bufferLength; i++) {
-                    if (this.dataArray[i] > maxValue) {
-                        maxValue = this.dataArray[i];
-                        maxIndex = i;
+                // Sort by difference (best matches first)
+                lagCandidates.sort((a, b) => a.diff - b.diff);
+                
+                if (lagCandidates.length === 0) return 0;
+                
+                // Get the best candidate
+                let bestLag = lagCandidates[0].lag;
+                let bestFreq = sampleRate / bestLag;
+                
+                // Harmonic analysis - check if a harmonic makes more sense
+                for (let i = 1; i < Math.min(5, lagCandidates.length); i++) {
+                    const candidateFreq = sampleRate / lagCandidates[i].lag;
+                    
+                    // Check if this candidate is a harmonic of the best frequency
+                    const ratio = candidateFreq / bestFreq;
+                    const harmonicRatios = [0.5, 2, 3, 4]; // Sub-harmonic and harmonics
+                    
+                    for (const harmonic of harmonicRatios) {
+                        if (Math.abs(ratio - harmonic) < 0.1) {
+                            // If we found a strong harmonic relationship, prefer the fundamental
+                            if (harmonic > 1) {
+                                bestFreq = candidateFreq / harmonic;
+                                bestLag = sampleRate / bestFreq;
+                            } else if (harmonic === 0.5) {
+                                bestFreq = candidateFreq * 2;
+                                bestLag = sampleRate / bestFreq;
+                            }
+                            break;
+                        }
                     }
                 }
                 
-                // Convert index to frequency
-                const frequency = maxIndex * sampleRate / (2 * bufferLength);
+                // Filter frequencies outside the expected range for bongos
+                if (bestFreq < 60 || bestFreq > 1000) return 0;
                 
-                // Only return frequencies in a reasonable range for drums
-                return (frequency > 80 && frequency < 800 && maxValue > -60) ? frequency : 0;
+                // Frequency smoothing using exponential moving average
+                if (!this.lastFrequency) this.lastFrequency = bestFreq;
+                if (!this.frequencyHistory) this.frequencyHistory = [];
+                
+                // Only smooth if the new frequency is reasonably close to recent values
+                const freqDiff = Math.abs(bestFreq - this.lastFrequency);
+                const maxJump = this.lastFrequency * 0.05; // Reduced to 5% frequency jumps for stability
+                
+                if (freqDiff < maxJump || this.frequencyHistory.length < 3) {
+                    // Apply exponential smoothing
+                    const smoothingFactor = 0.3;
+                    bestFreq = this.lastFrequency * (1 - smoothingFactor) + bestFreq * smoothingFactor;
+                    
+                    // Update frequency history for stability analysis
+                    this.frequencyHistory.push(bestFreq);
+                    if (this.frequencyHistory.length > 10) {
+                        this.frequencyHistory.shift();
+                    }
+                    
+                    this.lastFrequency = bestFreq;
+                } else {
+                    // Large jump detected - reset smoothing
+                    this.frequencyHistory = [bestFreq];
+                    this.lastFrequency = bestFreq;
+                }
+                
+                // Enhanced stability check - require more consistent readings
+                if (this.frequencyHistory.length >= 5) {
+                    const recent = this.frequencyHistory.slice(-5);
+                    const variance = this.calculateVariance(recent);
+                    const meanFreq = recent.reduce((a, b) => a + b) / recent.length;
+                    
+                    // Stricter variance threshold for noise reduction
+                    if (variance > (meanFreq * 0.03) ** 2) {
+                        return 0; // Unstable reading
+                    }
+                    
+                    // Additional check: require minimum signal consistency
+                    const maxDeviation = Math.max(...recent) - Math.min(...recent);
+                    if (maxDeviation > meanFreq * 0.08) {
+                        return 0; // Too much variation in readings
+                    }
+                } else {
+                    // Don't return any frequency until we have enough stable readings
+                    return 0;
+                }
+                
+                return bestFreq;
+            }
+            
+            // Helper method to calculate variance
+            calculateVariance(values) {
+                const mean = values.reduce((a, b) => a + b) / values.length;
+                const squaredDiffs = values.map(value => Math.pow(value - mean, 2));
+                return squaredDiffs.reduce((a, b) => a + b) / values.length;
             }
 
             frequencyToNote(frequency) {
@@ -405,10 +661,19 @@
             }
 
             updateMeter(cents) {
-                // Clamp cents to reasonable range for display
-                const clampedCents = Math.max(-100, Math.min(100, cents));
-                const percentage = ((clampedCents + 100) / 200) * 100;
-                this.elements.tuningMeter.style.width = percentage + '%';
+                // Clamp cents to [-100, 100]
+                const clamped = Math.max(-100, Math.min(100, cents));
+                const targetPercentage = ((clamped + 100) / 200) * 100;
+
+                // Exponential smoothing for a smoother UI (adjust alpha for responsiveness)
+                if (this.prevMeterPercentage === undefined) {
+                    this.prevMeterPercentage = targetPercentage;
+                }
+                const alpha = 0.2; // 0.0 = no movement, 1.0 = instant
+                const smoothed = this.prevMeterPercentage + alpha * (targetPercentage - this.prevMeterPercentage);
+                this.prevMeterPercentage = smoothed;
+
+                this.elements.tuningMeter.style.width = smoothed + '%';
             }
 
             updateStatus(cents) {
